@@ -27,6 +27,7 @@ class HIVOpen:
 
         self.results = None
         self.columns = None
+        self.param_samples = []
 
     def load_data(self, data, columnDictionary):
         """
@@ -55,10 +56,11 @@ class HIVOpen:
         self.S0 = self.N - self.I0
         self.E0 = 0
         self.R0 = 0
+        self.D0 = 0 
 
         self.b = initial_row[self.columns["number_of_births"]]
         self.d = initial_row[self.columns["natural_death_rate"]] / 100000
-        self.vs = initial_row[self.columns["viral_suppression"]]
+        self.art = initial_row[self.columns["viral_suppression"]]
 
     def simulate(self, years, initial_conditions=None, params=None, optimal_params=None, param_set=None):
         """
@@ -77,69 +79,96 @@ class HIVOpen:
         if self.data is None:
             raise ValueError("Data must be loaded before simulation.")
 
-        if optimal_params and param_set:
-            params = optimal_params.get(param_set)
-            if params is None:
-                raise ValueError(f"Parameter set '{param_set}' not found in optimal_params.")
-            self.beta, self.sigma, self.nu, self.mu, self.delta, self.gamma = params
-
         if params is not None:
             self.beta, self.sigma, self.nu, self.mu, self.delta, self.gamma = params
 
         if initial_conditions is None:
-            initial_conditions = [self.S0, self.E0, self.I0, self.R0]
-        
+            initial_conditions = [self.S0, self.E0, self.I0, self.R0, self.D0]
+    
         def seirs(t, y):
-            S, E, I, R = y
+            S, E, I, R, D = y
             N = S + E + I + R
-            effective_nu = self.nu * self.vs
 
-            dS_dt = self.b - self.beta * S * I / N - self.d * S + self.gamma * R
-            dE_dt = self.beta * S * I / N - self.sigma * E - self.d * E
-            dI_dt = self.sigma * E - effective_nu * I - self.d * I - self.delta * I
-            dR_dt = effective_nu * I - self.gamma * R - self.d * R
+            effective_nu = self.nu * self.art
 
-            return [dS_dt, dE_dt, dI_dt, dR_dt]
+            dS_dt = self.b - self.beta * S * I / N - self.mu * S + self.gamma * R
+            dE_dt = self.beta * S * I / N - self.sigma * E - self.mu * E
+            dI_dt = self.sigma * E - effective_nu * I - self.mu * I - self.delta * I
+            dR_dt = effective_nu * I - self.gamma * R - self.mu * R
+            dD_dt = self.delta * I 
+
+            return [dS_dt, dE_dt, dI_dt, dR_dt, dD_dt]
 
         t_span = [0, years - 1]
         t_eval = np.linspace(0, years - 1, years)
 
         solution = solve_ivp(seirs, t_span, initial_conditions, t_eval=t_eval, method="RK45")
 
-        S, E, I, R = solution.y
-        N = S + E + I + R
-        new_infections = self.beta * S * I / N
-        hiv_deaths = self.delta * I
-
         self.results = pd.DataFrame({
             "Year": pd.Series(range(self.data[self.columns["year"]].iloc[-1] + 1, 
                                     self.data[self.columns["year"]].iloc[-1] + 1 + years)),
-            "New HIV Infections": new_infections,
-            "Exposed": E,
-            "Infectious": I,
-            "Recovered (ART)": R,
-            "HIV Deaths": hiv_deaths
+            "Exposed": solution.y[1],
+            "Infectious": solution.y[2],
+            "Recovered (ART)": solution.y[3],
+            "Deaths (HIV)": solution.y[4]
         })
 
         return self.results
 
+    def calibrate_parameters(self, num_bootstrap=100):
+        """
+        Calibrate model parameters using bootstrapped historical data.
+        """
+        def loss_function(params, data):
+            simulated = self.simulate(len(data), params=params)
+            observed_infections = data[self.columns["new_infections"]].values
+            simulated_infections = simulated["Infectious"].values
+            return mean_squared_error(observed_infections, simulated_infections)
 
-    def plot_results(self):
-        """
-        Plot the simulation results.
-        """
-        if self.results is None:
-            raise ValueError("No results to plot. Run simulate() first.")
+        initial_params = [self.beta, self.sigma, self.nu, self.mu, self.delta, self.gamma]
+        bounds = [(0, 1), (0, 1), (0, 1), (0, 0.1), (0, 0.1), (0, 1)]
+
+        self.param_samples = []
+
+        for _ in range(num_bootstrap):
+            bootstrap_sample = self.data.sample(frac=1, replace=True)
+            result = minimize(loss_function, initial_params, args=(bootstrap_sample,), bounds=bounds, method="L-BFGS-B")
+            if result.success:
+                self.param_samples.append(result.x)
+
+        self.param_samples = np.array(self.param_samples)
+        self.beta, self.sigma, self.nu, self.mu, self.delta, self.gamma = np.mean(self.param_samples, axis=0)
+        print("Calibration completed with bootstrapping.")
+        print("Mean calibrated parameters:", self.beta, self.sigma, self.nu, self.mu, self.delta, self.gamma)
+
+    def simulate_with_uncertainty(self, years):
+        if self.param_samples.size == 0:
+            raise ValueError("No parameter samples found. Run calibrate_parameters() first.")
+
+        all_results = []
+
+        for params in self.param_samples:
+            result = self.simulate(years, params=params)
+            all_results.append(result[["Exposed", "Infectious", "Recovered (ART)", "Deaths (HIV)"]].values)
+
+        all_results = np.array(all_results)
+        mean_results = np.mean(all_results, axis=0)
+        lower_ci = np.percentile(all_results, 2.5, axis=0)
+        upper_ci = np.percentile(all_results, 97.5, axis=0)
+
+        years = result["Year"]
+
+        compartments = ["Exposed", "Infectious", "Recovered (ART)", "Deaths (HIV)"]
+        colors = ["orange", "red", "green", "purple"]
 
         plt.figure(figsize=(12, 8))
-        plt.plot(self.results["Year"], self.results["New HIV Infections"], label="New HIV Infections")
-        plt.plot(self.results["Year"], self.results["Exposed"], label="Exposed")
-        plt.plot(self.results["Year"], self.results["Infectious"], label="Infectious")
-        plt.plot(self.results["Year"], self.results["Recovered (ART)"], label="Recovered (ART)")
-        plt.plot(self.results["Year"], self.results["HIV Deaths"], label="HIV Deaths")
+        for i, compartment in enumerate(compartments):
+            plt.plot(years, mean_results[:, i], label=f"Mean {compartment}", color=colors[i])
+            plt.fill_between(years, lower_ci[:, i], upper_ci[:, i], color=colors[i], alpha=0.2)
+
         plt.xlabel("Year")
-        plt.ylabel("Population / Count")
-        plt.title("SEIRS Model Simulation with Open Cohort Dynamics")
+        plt.ylabel("Population")
+        plt.title("SEIRS Model Simulation with 95% Confidence Intervals")
         plt.legend()
         plt.grid()
         plt.show()

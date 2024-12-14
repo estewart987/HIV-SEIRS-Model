@@ -17,12 +17,10 @@ column_dict = {
 # Load the historical data
 model.load_data("HIVOpen/Data/example_data.csv", column_dict)
 
-# Simulate 10 years into the future
-future_results = model.simulate(10)
+# Calibrate the model parameters using bootstrapping
+model.calibrate_parameters(num_bootstrap=100)
 
-# Display the simulated future data
-print(future_results)
+# Simulate with uncertainty for 10 years
+model.simulate_with_uncertainty(10)
 
-# Plot the results
-model.plot_results()
 
