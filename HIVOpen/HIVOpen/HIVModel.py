@@ -62,7 +62,7 @@ class HIVOpen:
         self.d = initial_row[self.columns["natural_death_rate"]] / 100000
         self.art = initial_row[self.columns["viral_suppression"]]
 
-    def simulate(self, years, initial_conditions=None, params=None, optimal_params=None, param_set=None):
+    def simulate(self, years, initial_conditions=None, params=None):
         """
         Simulate the SEIRS model using the provided data and parameters.
 
@@ -70,8 +70,6 @@ class HIVOpen:
         - years: Number of years to simulate.
         - initial_conditions: Optional list of initial conditions [S, E, I, R].
         - params: Optional list of parameters (beta, sigma, nu, mu, delta, gamma) to use for simulation.
-        - optimal_params: Optional dictionary of parameter sets.
-        - param_set: The key of the parameter set to use from optimal_params.
 
         Returns:
         - results: Pandas DataFrame with simulation results.
@@ -84,12 +82,24 @@ class HIVOpen:
 
         if initial_conditions is None:
             initial_conditions = [self.S0, self.E0, self.I0, self.R0, self.D0]
-    
+        
+        def dynamic_art(I):
+            """
+            Dynamic viral suppression proportion based on the current number of infections.
+            Modeled as a sigmoid function to ensure it remains between 0 and 1.
+            """
+            max_art = 0.9  # Maximum possible ART proportion (90%)
+            inflection_point = 1000  # Number of infections where ART uptake is half of max
+            steepness = 0.001  # Controls how quickly ART uptake increases with infections
+
+            return max_art / (1 + np.exp(-steepness * (I - inflection_point)))
+
         def seirs(t, y):
             S, E, I, R, D = y
             N = S + E + I + R
 
-            effective_nu = self.nu * self.art
+            current_art = dynamic_art(I)
+            effective_nu = self.nu * current_art
 
             dS_dt = self.b - self.beta * S * I / N - self.mu * S + self.gamma * R
             dE_dt = self.beta * S * I / N - self.sigma * E - self.mu * E
@@ -168,7 +178,7 @@ class HIVOpen:
 
         plt.xlabel("Year")
         plt.ylabel("Population")
-        plt.title("SEIRS Model Simulation with 95% Confidence Intervals")
+        plt.title("HIV SEIRS Model (95% Confidence Intervals)")
         plt.legend()
         plt.grid()
         plt.show()
