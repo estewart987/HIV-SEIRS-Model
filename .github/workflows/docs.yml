@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install sphinx sphinx-rtd-theme
@@ -31,10 +31,10 @@ jobs:
         run: |
           cd docs
           sphinx-apidoc -f -o . ../src "../src/example.py" "../src/setup.py"
-          make html
+          sphinx-build . _build
 
       - name: Upload documentation
         uses: actions/upload-artifact@v3
         with:
           name: sphinx-html-docs
-          path: docs/_build/html
+          path: docs/_build

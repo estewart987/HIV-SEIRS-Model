@@ -28,7 +28,7 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: |
-          cd tests
+          cd src/tests
           python test_driver.py
 
       - name: Upload coverage report
