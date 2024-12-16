@@ -19,12 +19,12 @@ class HIVOpen:
         - gamma: Loss of immunity rate
         """
         # Initialize model parameters
-        self.beta = beta        
-        self.sigma = sigma      
-        self.nu = nu            
-        self.mu = mu            
-        self.delta = delta      
-        self.gamma = gamma      
+        self.beta = beta
+        self.sigma = sigma
+        self.nu = nu
+        self.mu = mu
+        self.delta = delta
+        self.gamma = gamma
 
         # Placeholder for simulation results, column mappings, and parameter samples
         self.results = None
@@ -46,12 +46,12 @@ class HIVOpen:
             self.data = data.copy()
         else:
             raise ValueError("Data must be a file path or pandas DataFrame")
-        
+
         # Ensure that all required columns exist in the data
         missing = [k for k, v in columnDictionary.items() if v not in self.data.columns]
         if missing:
             raise ValueError(f"Missing columns in the dataset: {missing}")
-        
+
         # Map the column names from the dictionary
         self.columns = columnDictionary
         # Extract the first row of data for initializing model compartments and parameters
@@ -83,7 +83,7 @@ class HIVOpen:
         - results: Pandas DataFrame with simulation results.
         """
         # Ensure that the data has been loaded before running the simulation
-        if self.data is None:
+        if not hasattr(self, 'data'):
             raise ValueError("Data must be loaded before simulation.")
         # If parameters are provided, update the model's parameters
         if params is not None:
@@ -92,12 +92,12 @@ class HIVOpen:
         # If initial conditions are not provided, use the default values from the loaded data
         if initial_conditions is None:
             initial_conditions = [self.S0, self.E0, self.I0, self.R0, self.D0]
-        
+
         # Define the system of differential equations for the SEIRS model
         def seirs(t, y):
             S, E, I, R, D = y   # Unpack compartments: Susceptible, Exposed, Infectious, Recovered, Deaths
             N = S + E + I + R   # Total population (excluding deaths)
-            
+
             # Compute effective ART recovery rate based on viral suppression proportion
             effective_nu = self.nu * self.art
 
@@ -119,7 +119,7 @@ class HIVOpen:
 
         # Compile the simulation results into a DataFrame
         self.results = pd.DataFrame({
-            "Year": pd.Series(range(self.data[self.columns["year"]].iloc[-1] + 1, 
+            "Year": pd.Series(range(self.data[self.columns["year"]].iloc[-1] + 1,
                                     self.data[self.columns["year"]].iloc[-1] + 1 + years)),
             "Exposed": solution.y[1],
             "Infectious": solution.y[2],
@@ -200,7 +200,7 @@ class HIVOpen:
         final_mse_infections = mean_squared_error(observed_infections, mean_simulated_infections)
         final_mse_deaths = mean_squared_error(observed_deaths, mean_simulated_deaths)
         final_mse_recovered = mean_squared_error(observed_virally_suppressed, mean_simulated_recovered)
-      
+
         # Print final MSE values for evaluation
         print(f"Final MSE (Infections): {final_mse_infections:.2f}")
         print(f"Final MSE (Death): {final_mse_deaths:.2f}")
@@ -250,9 +250,11 @@ class HIVOpen:
 
     def simulate_with_uncertainty(self, years):
         # Check if parameter samples exist; calibration must be run first
+        if not hasattr(self.param_samples, 'size'):
+            raise ValueError("No parameter samples found. Run calibrate_parameters() first.")
         if self.param_samples.size == 0:
             raise ValueError("No parameter samples found. Run calibrate_parameters() first.")
-        
+
         # Extract the last row of the data for initializing the simulation
         last_row = self.data.iloc[-1]
 
