@@ -39,7 +39,7 @@ def sample_population_data():
 @pytest.fixture
 def sample_viral_data():
     """Create sample viral suppression data for testing with all years from 1990-2020."""
-    years = list(range(1997, 2021))
+    years = [1994] + list(range(1997, 2021))
     data = {'Unnamed: 0': ['Viral Suppression Proportion']}
 
     # generate realistic viral suppression proportions
@@ -101,7 +101,7 @@ def test_load_viral_data(preprocessor):
     assert 'Year' in df.columns
     assert 'Viral Suppression Proportion' in df.columns
     assert df['Year'].dtype == np.int64
-    assert len(df) == 24  # 1997-2020 (31 years)
+    assert len(df) == 25  # 1997-2020 + 1994 (25 years)
 
     # test specific CDC data points
     assert np.isclose(df[df['Year'] == 2011]['Viral Suppression Proportion'].iloc[0], 0.30)
@@ -127,7 +127,7 @@ def test_predict_early_viral_suppression(preprocessor):
     df = preprocessor.predict_early_viral_suppression([1995, 1996])
 
     assert isinstance(df, pd.DataFrame)
-    assert len(df) == 26  # 1995-2020 (26 years)
+    assert len(df) == 27  # 1994-2020 (26 years)
     assert all(year in df['Year'].values for year in [1995, 1996])
     assert all(df['Viral Suppression Proportion'].notna())
 
