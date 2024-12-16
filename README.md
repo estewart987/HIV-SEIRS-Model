@@ -38,5 +38,52 @@ python OR python3 example.py
 
 ### 6. Example
 ```python
+import pandas as pd
+from HIVModel import HIVOpen
 
+# Take some arbitrary sample data
+data = pd.DataFrame({
+    'Year': [2010, 2011, 2012],
+    'Population': [300000000, 301000000, 302000000],
+    'New_HIV_Infections': [50000, 48000, 46000],
+    'Total_HIV_Cases': [1000000, 1020000, 1040000],
+    'HIV_Deaths': [15000, 14500, 14000],
+    'Births': [4000000, 4010000, 4020000],
+    'Natural_Death_Rate': [800, 790, 780],
+    'Viral_Suppression': [0.50, 0.52, 0.54]
+})
+
+# Define whatever column mappings you need for your data
+column_mapping = {
+    'year': 'Year',
+    'population': 'Population',
+    'new_infections': 'New_HIV_Infections',
+    'total_hiv': 'Total_HIV_Cases',
+    'deaths_hiv': 'HIV_Deaths',
+    'number_of_births': 'Births',
+    'natural_death_rate': 'Natural_Death_Rate',
+    'viral_suppression': 'Viral_Suppression'
+}
+
+# Initialize model with parameters
+model = HIVOpen(
+    beta=0.0001,   # Infection rate
+    sigma=0.01,    # Rate of progression from exposed to infectious
+    nu=0.1,        # Recovery rate (Anti-retroviral Therapies)
+    mu=0.02,       # Natural death rate
+    delta=0.03,    # HIV-related death rate
+    gamma=0.01     # Loss of immunity rate
+)
+
+# Load data
+model.load_data(data, column_mapping)
+
+# Calibrate model parameters
+model.calibrate_parameters(num_bootstrap=50)
+
+# Run simulation for 5 years into the future
+future_predictions = model.simulate(5)
+
+# Run simulation for 5 years into the future with uncertainty analysis
+model.simulate_with_uncertainty(5)  # this will also generate plots!
 ```
