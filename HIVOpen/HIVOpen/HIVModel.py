@@ -219,7 +219,7 @@ class HIVOpen:
         plt.legend()
         plt.grid()
         plt.ticklabel_format(style='plain')
-        plt.savefig('infections_fit.png')
+        plt.savefig('infections_fit3.png')
         plt.show()
 
         # Plot for deaths
@@ -232,7 +232,7 @@ class HIVOpen:
         plt.legend()
         plt.grid()
         plt.ticklabel_format(style='plain')
-        plt.savefig('deaths_fit.png')
+        plt.savefig('deaths_fit3.png')
         plt.show()
 
         # Plot for recovered (virally suppressed)
@@ -245,7 +245,7 @@ class HIVOpen:
         plt.legend()
         plt.grid()
         plt.ticklabel_format(style='plain')
-        plt.savefig('recovered_fit.png')
+        plt.savefig('recovered_fit3.png')
         plt.show()
 
     def simulate_with_uncertainty(self, years):
@@ -260,7 +260,7 @@ class HIVOpen:
         N = last_row[self.columns["population"]]        # Total population
         I0 = last_row[self.columns["new_infections"]]   # Initial infectious individuals
         S0 = N - I0                                     # Initial susceptible population
-        E0 = S0 * 0.01                                  # Initial exposed population
+        E0 = S0 * 0.000667                                  # Initial exposed population
         R0 = last_row[self.columns["total_hiv"]] * last_row[self.columns["viral_suppression"]] # Recovered (virally suppressed)
         D0 = last_row[self.columns["deaths_hiv"]]       # Initial cumulative deaths
 
@@ -299,5 +299,5 @@ class HIVOpen:
         plt.ticklabel_format(style='plain')
         plt.legend()
         plt.grid()
-        plt.savefig('SEIRS_results.png')
+        plt.savefig('SEIRS_results3.png')
         plt.show()
