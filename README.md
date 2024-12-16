@@ -27,16 +27,22 @@ cd src
 ### 3. Install Required Packages
 Use the `setup.py` file to install all dependencies:
 ```bash
-pip OR pip3 setup.py insteall
+pip OR pip3 setup.py install
 ```
 
-### 4. Run example.py
-Run example.py. This will clean the data to be in a format appropriate to calibrate the model and run simulations. You can adjust the initial guesses for the parameters in example.py and load in your own dataset, as long as the columns match up with the code in HIVModel.py.
+### 4. Run clean_data.py
+Run clean_data.py. This will create a dataset to be in a format appropriate for calibrating the model.
+```bash
+python OR python3 clean_data.py
+```
+
+### 5. Run example.py
+Run example.py. This will calibrate the model and run simulations. You can adjust the initial guesses for the parameters in example.py and load in your own dataset, as long as the columns match up with the code in HIVModel.py.
 ```bash
 python OR python3 example.py
 ```
 
-### 5. Example usage
+### 6. Example usage
 Below is a bit of code demonstrating typical usage of our model. Feel free to adapt this to your own use case!
 ```python
 import pandas as pd
