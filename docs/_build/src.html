@@ -1,0 +1,604 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src package &mdash; Modeling HIV with an Open Cohort SEIR-S Framework 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="src" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Modeling HIV with an Open Cohort SEIR-S Framework
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">src package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.HIVModel">src.HIVModel module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#src.HIVModel.HIVOpen"><code class="docutils literal notranslate"><span class="pre">HIVOpen</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.clean_data">src.clean_data module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#src.clean_data.PopulationDataPreprocessor"><code class="docutils literal notranslate"><span class="pre">PopulationDataPreprocessor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.clean_data.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Modeling HIV with an Open Cohort SEIR-S Framework</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">src</a></li>
+      <li class="breadcrumb-item active">src package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/src.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="src-package">
+<h1>src package<a class="headerlink" href="#src-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-src.HIVModel">
+<span id="src-hivmodel-module"></span><h2>src.HIVModel module<a class="headerlink" href="#module-src.HIVModel" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.HIVModel.</span></span><span class="sig-name descname"><span class="pre">HIVOpen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/HIVModel.html#HIVOpen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.HIVModel.HIVOpen" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class implementing an open SEIRS (Susceptible-Exposed-Infectious-Recovered-Susceptible) model for HIV.</p>
+<p>This class implements a modified SEIRS epidemiological model that accounts for
+population dynamics, HIV transmission, and treatment effects. The model includes
+birth rates, natural death rates, and HIV-related mortality.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.beta">
+<span class="sig-name descname"><span class="pre">beta</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.beta" title="Link to this definition"></a></dt>
+<dd><p>Infection rate parameter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.sigma">
+<span class="sig-name descname"><span class="pre">sigma</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.sigma" title="Link to this definition"></a></dt>
+<dd><p>Rate of progression from exposed to infectious state</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.nu">
+<span class="sig-name descname"><span class="pre">nu</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.nu" title="Link to this definition"></a></dt>
+<dd><p>Recovery rate due to Anti-retroviral Therapies (ART)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.mu">
+<span class="sig-name descname"><span class="pre">mu</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.mu" title="Link to this definition"></a></dt>
+<dd><p>Natural death rate</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.delta" title="Link to this definition"></a></dt>
+<dd><p>HIV-related death rate</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.gamma">
+<span class="sig-name descname"><span class="pre">gamma</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.gamma" title="Link to this definition"></a></dt>
+<dd><p>Rate at which recovered individuals become susceptible again</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.results">
+<span class="sig-name descname"><span class="pre">results</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.results" title="Link to this definition"></a></dt>
+<dd><p>Storage for simulation results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.columns">
+<span class="sig-name descname"><span class="pre">columns</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.columns" title="Link to this definition"></a></dt>
+<dd><p>Mapping between model parameters and data column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.param_samples">
+<span class="sig-name descname"><span class="pre">param_samples</span></span><a class="headerlink" href="#src.HIVModel.HIVOpen.param_samples" title="Link to this definition"></a></dt>
+<dd><p>Storage for parameter samples during calibration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.calibrate_parameters">
+<span class="sig-name descname"><span class="pre">calibrate_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/HIVModel.html#HIVOpen.calibrate_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.HIVModel.HIVOpen.calibrate_parameters" title="Link to this definition"></a></dt>
+<dd><p>Calibrate model parameters using bootstrapped historical data.</p>
+<p>This method performs parameter calibration using bootstrap resampling of the
+historical data. It minimizes the mean squared error between observed and
+simulated values for infections, deaths, and recovered cases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_bootstrap</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of bootstrap samples to use.
+Defaults to 100.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Contains three elements:</dt><dd><ul class="simple">
+<li><p>numpy.ndarray: Mean simulated values for infections</p></li>
+<li><p>numpy.ndarray: Mean simulated values for recovered cases</p></li>
+<li><p>numpy.ndarray: Mean simulated values for deaths</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method also creates three plots comparing observed vs simulated values
+and saves them as PNG files: ‘infections_fit3.png’, ‘deaths_fit3.png’,
+and ‘recovered_fit3.png’</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.load_data">
+<span class="sig-name descname"><span class="pre">load_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columnDictionary</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/HIVModel.html#HIVOpen.load_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.HIVModel.HIVOpen.load_data" title="Link to this definition"></a></dt>
+<dd><p>Load and preprocess data for the model.</p>
+<p>This method loads either a CSV file or DataFrame and maps the columns to the
+required model parameters. It also initializes the model’s compartments and
+demographic parameters based on the first row of data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>pandas.DataFrame</em><em>]</em>) – Either a path to a CSV file or a pandas DataFrame</p></li>
+<li><p><strong>columnDictionary</strong> (<em>dict</em>) – Dictionary mapping model parameters to column names in the data.
+Required keys are: [‘population’, ‘new_infections’, ‘total_hiv’,
+‘viral_suppression’, ‘deaths_hiv’, ‘number_of_births’, ‘natural_death_rate’]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If data is neither a string nor DataFrame, or if required columns are missing</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method sets several instance attributes including S0, E0, I0, R0, D0
+(initial compartment values) and b, d, art (demographic parameters)</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.simulate">
+<span class="sig-name descname"><span class="pre">simulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">years</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_conditions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/HIVModel.html#HIVOpen.simulate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.HIVModel.HIVOpen.simulate" title="Link to this definition"></a></dt>
+<dd><p>Simulate the SEIRS model for a specified number of years.</p>
+<p>This method solves the system of differential equations that define the SEIRS
+model using numerical integration. It can use either default or custom initial
+conditions and parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>years</strong> (<em>int</em>) – Number of years to simulate</p></li>
+<li><p><strong>initial_conditions</strong> (<em>list</em><em>, </em><em>optional</em>) – List of initial values [S0, E0, I0, R0, D0].
+Defaults to None, using values from loaded data.</p></li>
+<li><p><strong>params</strong> (<em>list</em><em>, </em><em>optional</em>) – List of model parameters [beta, sigma, nu, mu, delta, gamma].
+Defaults to None, using instance parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Simulation results containing columns for Year, Exposed,</dt><dd><p>Infectious, Recovered (ART), and Deaths (HIV)</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If data hasn’t been loaded before simulation</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The returned DataFrame includes yearly values for all compartments
+and can be accessed via the instance’s results attribute</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.HIVModel.HIVOpen.simulate_with_uncertainty">
+<span class="sig-name descname"><span class="pre">simulate_with_uncertainty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">years</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/HIVModel.html#HIVOpen.simulate_with_uncertainty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.HIVModel.HIVOpen.simulate_with_uncertainty" title="Link to this definition"></a></dt>
+<dd><p>Simulate the model with uncertainty quantification.</p>
+<p>This method runs multiple simulations using the calibrated parameter samples
+to generate mean predictions with confidence intervals. It creates a plot
+showing the mean and 95% confidence intervals for all compartments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>years</strong> (<em>int</em>) – Number of years to simulate forward</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If parameter samples don’t exist (calibration hasn’t been run)</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Creates and saves a plot as ‘SEIRS_results3.png’ showing predictions
+with confidence intervals for all compartments</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-src.clean_data">
+<span id="src-clean-data-module"></span><h2>src.clean_data module<a class="headerlink" href="#module-src.clean_data" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.clean_data.</span></span><span class="sig-name descname"><span class="pre">PopulationDataPreprocessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">population_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">viral_filepath</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class to handle the preprocessing of population and viral suppression data.</p>
+<p>This class provides functionality to load, process, and analyze population and
+viral suppression data from CSV files. It includes methods for data cleaning,
+prediction of viral suppression rates, and adjustment of historical data.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.population_filepath">
+<span class="sig-name descname"><span class="pre">population_filepath</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.population_filepath" title="Link to this definition"></a></dt>
+<dd><p>Path to the population data CSV file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.viral_filepath">
+<span class="sig-name descname"><span class="pre">viral_filepath</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.viral_filepath" title="Link to this definition"></a></dt>
+<dd><p>Path to the viral suppression data CSV file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.pop_df">
+<span class="sig-name descname"><span class="pre">pop_df</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.pop_df" title="Link to this definition"></a></dt>
+<dd><p>DataFrame containing population data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.viral_df">
+<span class="sig-name descname"><span class="pre">viral_df</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.viral_df" title="Link to this definition"></a></dt>
+<dd><p>DataFrame containing viral suppression data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.logistic_function">
+<span class="sig-name descname"><span class="pre">logistic_function</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.logistic_function" title="Link to this definition"></a></dt>
+<dd><p>Fitted logistic function for predictions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.params">
+<span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.params" title="Link to this definition"></a></dt>
+<dd><p>Parameters of the fitted logistic function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.cdc_years">
+<span class="sig-name descname"><span class="pre">cdc_years</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.cdc_years" title="Link to this definition"></a></dt>
+<dd><p>Array of years with CDC viral suppression data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.cdc_values">
+<span class="sig-name descname"><span class="pre">cdc_values</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.cdc_values" title="Link to this definition"></a></dt>
+<dd><p>Array of CDC viral suppression values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.cdc_data">
+<span class="sig-name descname"><span class="pre">cdc_data</span></span><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.cdc_data" title="Link to this definition"></a></dt>
+<dd><p>Dictionary mapping years to CDC viral suppression values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.adjust_viral_suppression">
+<span class="sig-name descname"><span class="pre">adjust_viral_suppression</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.adjust_viral_suppression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.adjust_viral_suppression" title="Link to this definition"></a></dt>
+<dd><p>Adjust viral suppression values based on historical and predicted data.</p>
+<p>This method creates adjusted viral suppression values using a combination of
+historical data, CDC data points, and logistic function predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>DataFrame containing adjusted viral suppression values</dt><dd><p>for years 1990-2021</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.fit_logistic_curve">
+<span class="sig-name descname"><span class="pre">fit_logistic_curve</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.fit_logistic_curve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.fit_logistic_curve" title="Link to this definition"></a></dt>
+<dd><p>Fit logistic function to CDC data points.</p>
+<p>This method fits a logistic function to the CDC viral suppression data points
+using scipy’s curve_fit function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A tuple containing:</dt><dd><ul class="simple">
+<li><p>callable: The fitted logistic function</p></li>
+<li><p>tuple: The optimal parameters (L, x0, k)</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.load_population_data">
+<span class="sig-name descname"><span class="pre">load_population_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.load_population_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.load_population_data" title="Link to this definition"></a></dt>
+<dd><p>Load and preprocess population data from CSV file.</p>
+<p>This method reads the population data CSV file, transposes it for proper
+formatting, and calculates additional metrics including births and deaths.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Processed population data with calculated metrics</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.load_viral_data">
+<span class="sig-name descname"><span class="pre">load_viral_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.load_viral_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.load_viral_data" title="Link to this definition"></a></dt>
+<dd><p>Load and preprocess viral suppression data from CSV file.</p>
+<p>This method reads the viral suppression data CSV file, transposes it for proper
+formatting, and converts the year column to integer type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Processed viral suppression data</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.predict_early_viral_suppression">
+<span class="sig-name descname"><span class="pre">predict_early_viral_suppression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">years_to_predict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.predict_early_viral_suppression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.predict_early_viral_suppression" title="Link to this definition"></a></dt>
+<dd><p>Predict viral suppression values for early years using linear regression.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>years_to_predict</strong> (<em>list</em>) – Years to predict viral suppression values for</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Updated viral suppression DataFrame with predicted values</dt><dd><p>for early years</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.clean_data.PopulationDataPreprocessor.process_data">
+<span class="sig-name descname"><span class="pre">process_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#PopulationDataPreprocessor.process_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.PopulationDataPreprocessor.process_data" title="Link to this definition"></a></dt>
+<dd><p>Execute the main data processing workflow.</p>
+<p>This method orchestrates the complete data processing workflow, including:
+1. Loading population and viral suppression data
+2. Fitting the logistic curve
+3. Predicting early years
+4. Adjusting viral suppression values
+5. Combining all processed data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>Final processed DataFrame containing population data</dt><dd><p>with adjusted viral suppression values</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.clean_data.main">
+<span class="sig-prename descclassname"><span class="pre">src.clean_data.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/clean_data.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.clean_data.main" title="Link to this definition"></a></dt>
+<dd><p>Run the preprocessing workflow.</p>
+<p>This function instantiates the PopulationDataPreprocessor class with the
+appropriate file paths, processes the data, and saves the results to a CSV file.</p>
+</dd></dl>
+
+</section>
+<section id="module-src">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-src" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="src" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Ryan O&#39;Dea, Emily Stewart, Patrick Thornton.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
