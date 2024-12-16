@@ -1,4 +1,4 @@
-from HIVOpen.HIVModel import HIVOpen
+from HIVModel import HIVOpen
 import pandas as pd
 
 # Initialize the model with initial guesses for parameters
@@ -18,7 +18,7 @@ column_dict = {
 }
 
 # Load the historical data
-model.load_data("HIVOpen/Data/example_data_test.csv", column_dict)
+model.load_data("data/example_data_test.csv", column_dict)
 
 # Calibrate the model parameters using bootstrapping
 model.calibrate_parameters(num_bootstrap=200)
