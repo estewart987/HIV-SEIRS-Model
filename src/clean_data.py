@@ -5,15 +5,28 @@ from sklearn.linear_model import LinearRegression
 
 
 class PopulationDataPreprocessor:
-    """
-    A class to handle the preprocessing of population and viral suppression data.
+    """A class to handle the preprocessing of population and viral suppression data.
+
+    This class provides functionality to load, process, and analyze population and
+    viral suppression data from CSV files. It includes methods for data cleaning,
+    prediction of viral suppression rates, and adjustment of historical data.
+
+    Attributes:
+        population_filepath (str): Path to the population data CSV file
+        viral_filepath (str): Path to the viral suppression data CSV file
+        pop_df (pandas.DataFrame): DataFrame containing population data
+        viral_df (pandas.DataFrame): DataFrame containing viral suppression data
+        logistic_function (callable): Fitted logistic function for predictions
+        params (tuple): Parameters of the fitted logistic function
+        cdc_years (numpy.ndarray): Array of years with CDC viral suppression data
+        cdc_values (numpy.ndarray): Array of CDC viral suppression values
+        cdc_data (dict): Dictionary mapping years to CDC viral suppression values
     """
 
     def __init__(self, population_filepath, viral_filepath):
-        """
-        Initialize the preprocessor with file paths.
+        """Initialize the preprocessor with file paths.
 
-        Parameters:
+        Args:
             population_filepath (str): Path to the population data CSV file
             viral_filepath (str): Path to the viral suppression data CSV file
         """
@@ -30,7 +43,14 @@ class PopulationDataPreprocessor:
         self.cdc_data = dict(zip(self.cdc_years, self.cdc_values))
 
     def load_population_data(self):
-        """Load and preprocess population data from CSV file."""
+        """Load and preprocess population data from CSV file.
+
+        This method reads the population data CSV file, transposes it for proper
+        formatting, and calculates additional metrics including births and deaths.
+
+        Returns:
+            pandas.DataFrame: Processed population data with calculated metrics
+        """
         self.pop_df = pd.read_csv(self.population_filepath)
         self.pop_df = self.pop_df.set_index("Unnamed: 0").T.reset_index()
         self.pop_df = self.pop_df.rename(columns={"index": "Year"})
@@ -45,7 +65,14 @@ class PopulationDataPreprocessor:
         return self.pop_df
 
     def load_viral_data(self):
-        """Load and preprocess viral suppression data from CSV file."""
+        """Load and preprocess viral suppression data from CSV file.
+
+        This method reads the viral suppression data CSV file, transposes it for proper
+        formatting, and converts the year column to integer type.
+
+        Returns:
+            pandas.DataFrame: Processed viral suppression data
+        """
         self.viral_df = pd.read_csv(self.viral_filepath)
         self.viral_df = self.viral_df.set_index("Unnamed: 0").T.reset_index()
         self.viral_df = self.viral_df.rename(columns={"index": "Year"})
@@ -54,31 +81,45 @@ class PopulationDataPreprocessor:
 
     @staticmethod
     def _logistic_function(x, L, x0, k):
-        """
-        Static method for the logistic function calculation.
+        """Calculate the logistic function value.
 
-        Parameters:
-            x: Input value (year)
-            L: Maximum value (asymptote)
-            x0: Midpoint (where y = L/2)
-            k: Steepness of the curve
+        Args:
+            x (float or numpy.ndarray): Input value (year)
+            L (float): Maximum value (asymptote)
+            x0 (float): Midpoint (where y = L/2)
+            k (float): Steepness of the curve
+
+        Returns:
+            float or numpy.ndarray: Calculated logistic function value(s)
         """
         x = x - 2011
         return L / (1 + np.exp(-k * (x - x0)))
 
     def fit_logistic_curve(self):
-        """Fit logistic function to CDC data points."""
+        """Fit logistic function to CDC data points.
+
+        This method fits a logistic function to the CDC viral suppression data points
+        using scipy's curve_fit function.
+
+        Returns:
+            tuple: A tuple containing:
+                - callable: The fitted logistic function
+                - tuple: The optimal parameters (L, x0, k)
+        """
         self.params, _ = curve_fit(
             self._logistic_function, self.cdc_years, self.cdc_values
         )
         return self._logistic_function, self.params
 
     def predict_early_viral_suppression(self, years_to_predict):
-        """
-        Predict viral suppression values for early years using linear regression.
+        """Predict viral suppression values for early years using linear regression.
 
-        Parameters:
+        Args:
             years_to_predict (list): Years to predict viral suppression values for
+
+        Returns:
+            pandas.DataFrame: Updated viral suppression DataFrame with predicted values
+                            for early years
         """
         filtered_df = self.viral_df[self.viral_df["Year"].isin([1997, 1998, 1999])]
         x = filtered_df["Year"].astype(int).values.reshape(-1, 1)
@@ -96,7 +137,15 @@ class PopulationDataPreprocessor:
         return self.viral_df
 
     def adjust_viral_suppression(self):
-        """Adjust viral suppression values based on historical and predicted data."""
+        """Adjust viral suppression values based on historical and predicted data.
+
+        This method creates adjusted viral suppression values using a combination of
+        historical data, CDC data points, and logistic function predictions.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing adjusted viral suppression values
+                            for years 1990-2021
+        """
         L, x0, k = self.params
         adj_viral_df = pd.DataFrame(
             {"Year": list(range(1990, 2022)), "Viral Suppression Proportion": np.nan}
@@ -140,7 +189,19 @@ class PopulationDataPreprocessor:
         return adj_viral_df
 
     def process_data(self):
-        """Main workflow to process all data."""
+        """Execute the main data processing workflow.
+
+        This method orchestrates the complete data processing workflow, including:
+        1. Loading population and viral suppression data
+        2. Fitting the logistic curve
+        3. Predicting early years
+        4. Adjusting viral suppression values
+        5. Combining all processed data
+
+        Returns:
+            pandas.DataFrame: Final processed DataFrame containing population data
+                            with adjusted viral suppression values
+        """
         # Load both datasets
         self.load_population_data()
         self.load_viral_data()
@@ -160,7 +221,11 @@ class PopulationDataPreprocessor:
 
 
 def main():
-    """Main function to run the preprocessing workflow."""
+    """Run the preprocessing workflow.
+
+    This function instantiates the PopulationDataPreprocessor class with the
+    appropriate file paths, processes the data, and saves the results to a CSV file.
+    """
     preprocessor = PopulationDataPreprocessor(
         population_filepath="data/population_data.csv",
         viral_filepath="data/viral_suppression.csv",

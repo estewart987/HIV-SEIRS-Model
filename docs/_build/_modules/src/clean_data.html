@@ -1,0 +1,367 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.clean_data &mdash; Modeling HIV with an Open Cohort SEIR-S Framework 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Modeling HIV with an Open Cohort SEIR-S Framework
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Modeling HIV with an Open Cohort SEIR-S Framework</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.clean_data</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.clean_data</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LinearRegression</span>
+
+
+<div class="viewcode-block" id="PopulationDataPreprocessor">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor">[docs]</a>
+<span class="k">class</span> <span class="nc">PopulationDataPreprocessor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class to handle the preprocessing of population and viral suppression data.</span>
+
+<span class="sd">    This class provides functionality to load, process, and analyze population and</span>
+<span class="sd">    viral suppression data from CSV files. It includes methods for data cleaning,</span>
+<span class="sd">    prediction of viral suppression rates, and adjustment of historical data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        population_filepath (str): Path to the population data CSV file</span>
+<span class="sd">        viral_filepath (str): Path to the viral suppression data CSV file</span>
+<span class="sd">        pop_df (pandas.DataFrame): DataFrame containing population data</span>
+<span class="sd">        viral_df (pandas.DataFrame): DataFrame containing viral suppression data</span>
+<span class="sd">        logistic_function (callable): Fitted logistic function for predictions</span>
+<span class="sd">        params (tuple): Parameters of the fitted logistic function</span>
+<span class="sd">        cdc_years (numpy.ndarray): Array of years with CDC viral suppression data</span>
+<span class="sd">        cdc_values (numpy.ndarray): Array of CDC viral suppression values</span>
+<span class="sd">        cdc_data (dict): Dictionary mapping years to CDC viral suppression values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">population_filepath</span><span class="p">,</span> <span class="n">viral_filepath</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the preprocessor with file paths.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            population_filepath (str): Path to the population data CSV file</span>
+<span class="sd">            viral_filepath (str): Path to the viral suppression data CSV file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population_filepath</span> <span class="o">=</span> <span class="n">population_filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_filepath</span> <span class="o">=</span> <span class="n">viral_filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logistic_function</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># CDC viral suppression data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdc_years</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2011</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2019</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdc_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.53</span><span class="p">,</span> <span class="mf">0.66</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdc_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cdc_years</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdc_values</span><span class="p">))</span>
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.load_population_data">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.load_population_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_population_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load and preprocess population data from CSV file.</span>
+
+<span class="sd">        This method reads the population data CSV file, transposes it for proper</span>
+<span class="sd">        formatting, and calculates additional metrics including births and deaths.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: Processed population data with calculated metrics</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_filepath</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Unnamed: 0&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="s2">&quot;Year&quot;</span><span class="p">})</span>
+
+        <span class="c1"># Calculate births and deaths</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Number of Births&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Number of women in US&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Crude birth rate per 1,000 women&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Number of Deaths&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;US Population&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Population level Death Rates per 100,000 people&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">100000</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span></div>
+
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.load_viral_data">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.load_viral_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_viral_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load and preprocess viral suppression data from CSV file.</span>
+
+<span class="sd">        This method reads the viral suppression data CSV file, transposes it for proper</span>
+<span class="sd">        formatting, and converts the year column to integer type.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: Processed viral suppression data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viral_filepath</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Unnamed: 0&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="s2">&quot;Year&quot;</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_logistic_function</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the logistic function value.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x (float or numpy.ndarray): Input value (year)</span>
+<span class="sd">            L (float): Maximum value (asymptote)</span>
+<span class="sd">            x0 (float): Midpoint (where y = L/2)</span>
+<span class="sd">            k (float): Steepness of the curve</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float or numpy.ndarray: Calculated logistic function value(s)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="mi">2011</span>
+        <span class="k">return</span> <span class="n">L</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)))</span>
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.fit_logistic_curve">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.fit_logistic_curve">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit_logistic_curve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit logistic function to CDC data points.</span>
+
+<span class="sd">        This method fits a logistic function to the CDC viral suppression data points</span>
+<span class="sd">        using scipy&#39;s curve_fit function.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing:</span>
+<span class="sd">                - callable: The fitted logistic function</span>
+<span class="sd">                - tuple: The optimal parameters (L, x0, k)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logistic_function</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdc_years</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdc_values</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logistic_function</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span></div>
+
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.predict_early_viral_suppression">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.predict_early_viral_suppression">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict_early_viral_suppression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">years_to_predict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Predict viral suppression values for early years using linear regression.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            years_to_predict (list): Years to predict viral suppression values for</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: Updated viral suppression DataFrame with predicted values</span>
+<span class="sd">                            for early years</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filtered_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mi">1997</span><span class="p">,</span> <span class="mi">1998</span><span class="p">,</span> <span class="mi">1999</span><span class="p">])]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="p">[</span><span class="s2">&quot;Viral Suppression Proportion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">LinearRegression</span><span class="p">()</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">predicted_values</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">years_to_predict</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="n">new_rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;Year&quot;</span><span class="p">:</span> <span class="n">years_to_predict</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span><span class="p">:</span> <span class="n">predicted_values</span><span class="p">}</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">,</span> <span class="n">new_rows</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;Year&quot;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span></div>
+
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.adjust_viral_suppression">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.adjust_viral_suppression">[docs]</a>
+    <span class="k">def</span> <span class="nf">adjust_viral_suppression</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adjust viral suppression values based on historical and predicted data.</span>
+
+<span class="sd">        This method creates adjusted viral suppression values using a combination of</span>
+<span class="sd">        historical data, CDC data points, and logistic function predictions.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: DataFrame containing adjusted viral suppression values</span>
+<span class="sd">                            for years 1990-2021</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">L</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
+        <span class="n">adj_viral_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;Year&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1990</span><span class="p">,</span> <span class="mi">2022</span><span class="p">)),</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">}</span>
+        <span class="p">)</span>
+
+        <span class="n">viral_sup_ratio</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cdc_data</span><span class="p">[</span><span class="mi">2011</span><span class="p">]</span>
+            <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2011</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+            <span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">early_90s_addition</span> <span class="o">=</span> <span class="mf">0.0025</span>
+        <span class="n">early_90s_multiplier</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="n">adj_viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">year</span> <span class="o">&lt;</span> <span class="mi">1995</span><span class="p">:</span>
+                <span class="n">adj_viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">adj_viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="n">early_90s_addition</span> <span class="o">*</span> <span class="n">early_90s_multiplier</span>
+                <span class="n">early_90s_multiplier</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="mi">1995</span> <span class="o">&lt;=</span> <span class="n">year</span> <span class="o">&lt;</span> <span class="mi">2011</span><span class="p">:</span>
+                <span class="n">adj_viral_sup_value</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">viral_sup_ratio</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">adj_viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">adj_viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="n">adj_viral_sup_value</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">year</span> <span class="o">&gt;</span> <span class="mi">2010</span> <span class="ow">and</span> <span class="n">year</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2011</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]:</span>
+                <span class="n">adj_viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">adj_viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logistic_function</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">year</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2011</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]:</span>
+                <span class="n">adj_viral_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">adj_viral_df</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">,</span> <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdc_data</span><span class="p">[</span><span class="n">year</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">adj_viral_df</span></div>
+
+
+<div class="viewcode-block" id="PopulationDataPreprocessor.process_data">
+<a class="viewcode-back" href="../../src.html#src.clean_data.PopulationDataPreprocessor.process_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">process_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute the main data processing workflow.</span>
+
+<span class="sd">        This method orchestrates the complete data processing workflow, including:</span>
+<span class="sd">        1. Loading population and viral suppression data</span>
+<span class="sd">        2. Fitting the logistic curve</span>
+<span class="sd">        3. Predicting early years</span>
+<span class="sd">        4. Adjusting viral suppression values</span>
+<span class="sd">        5. Combining all processed data</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: Final processed DataFrame containing population data</span>
+<span class="sd">                            with adjusted viral suppression values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Load both datasets</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_population_data</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_viral_data</span><span class="p">()</span>
+
+        <span class="c1"># Fit logistic function and get parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logistic_function</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_logistic_curve</span><span class="p">()</span>
+
+        <span class="c1"># Predict early years and adjust viral suppression</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predict_early_viral_suppression</span><span class="p">([</span><span class="mi">1995</span><span class="p">,</span> <span class="mi">1996</span><span class="p">])</span>
+        <span class="n">adj_viral_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust_viral_suppression</span><span class="p">()</span>
+
+        <span class="c1"># Add adjusted viral suppression to population data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span><span class="p">[</span><span class="s2">&quot;Viral Suppression Proportion&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adj_viral_df</span><span class="p">[</span>
+            <span class="s2">&quot;Viral Suppression Proportion&quot;</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop_df</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../src.html#src.clean_data.main">[docs]</a>
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the preprocessing workflow.</span>
+
+<span class="sd">    This function instantiates the PopulationDataPreprocessor class with the</span>
+<span class="sd">    appropriate file paths, processes the data, and saves the results to a CSV file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">preprocessor</span> <span class="o">=</span> <span class="n">PopulationDataPreprocessor</span><span class="p">(</span>
+        <span class="n">population_filepath</span><span class="o">=</span><span class="s2">&quot;data/population_data.csv&quot;</span><span class="p">,</span>
+        <span class="n">viral_filepath</span><span class="o">=</span><span class="s2">&quot;data/viral_suppression.csv&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Process all data</span>
+    <span class="n">final_df</span> <span class="o">=</span> <span class="n">preprocessor</span><span class="o">.</span><span class="n">process_data</span><span class="p">()</span>
+
+    <span class="c1"># Save the results</span>
+    <span class="n">final_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;data/updated_population_data.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Ryan O&#39;Dea, Emily Stewart, Patrick Thornton.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

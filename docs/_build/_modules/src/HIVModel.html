@@ -1,0 +1,613 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.HIVModel &mdash; Modeling HIV with an Open Cohort SEIR-S Framework 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Modeling HIV with an Open Cohort SEIR-S Framework
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Modeling HIV with an Open Cohort SEIR-S Framework</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.HIVModel</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.HIVModel</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">solve_ivp</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">minimize</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">mean_squared_error</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+
+<div class="viewcode-block" id="HIVOpen">
+<a class="viewcode-back" href="../../src.html#src.HIVModel.HIVOpen">[docs]</a>
+<span class="k">class</span> <span class="nc">HIVOpen</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class implementing an open SEIRS (Susceptible-Exposed-Infectious-Recovered-Susceptible) model for HIV.</span>
+
+<span class="sd">    This class implements a modified SEIRS epidemiological model that accounts for</span>
+<span class="sd">    population dynamics, HIV transmission, and treatment effects. The model includes</span>
+<span class="sd">    birth rates, natural death rates, and HIV-related mortality.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        beta (float): Infection rate parameter</span>
+<span class="sd">        sigma (float): Rate of progression from exposed to infectious state</span>
+<span class="sd">        nu (float): Recovery rate due to Anti-retroviral Therapies (ART)</span>
+<span class="sd">        mu (float): Natural death rate</span>
+<span class="sd">        delta (float): HIV-related death rate</span>
+<span class="sd">        gamma (float): Rate at which recovered individuals become susceptible again</span>
+<span class="sd">        results (pandas.DataFrame): Storage for simulation results</span>
+<span class="sd">        columns (dict): Mapping between model parameters and data column names</span>
+<span class="sd">        param_samples (list): Storage for parameter samples during calibration</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the SEIRS model with epidemiological parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            beta (float): Infection rate parameter</span>
+<span class="sd">            sigma (float): Rate of progression from exposed to infectious state</span>
+<span class="sd">            nu (float): Recovery rate due to Anti-retroviral Therapies (ART)</span>
+<span class="sd">            mu (float): Natural death rate</span>
+<span class="sd">            delta (float): HIV-related death rate</span>
+<span class="sd">            gamma (float): Rate at which recovered individuals become susceptible again</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize model parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="n">nu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+
+        <span class="c1"># Placeholder for simulation results, column mappings, and parameter samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="HIVOpen.load_data">
+<a class="viewcode-back" href="../../src.html#src.HIVModel.HIVOpen.load_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">columnDictionary</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load and preprocess data for the model.</span>
+
+<span class="sd">        This method loads either a CSV file or DataFrame and maps the columns to the</span>
+<span class="sd">        required model parameters. It also initializes the model&#39;s compartments and</span>
+<span class="sd">        demographic parameters based on the first row of data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (Union[str, pandas.DataFrame]): Either a path to a CSV file or a pandas DataFrame</span>
+<span class="sd">            columnDictionary (dict): Dictionary mapping model parameters to column names in the data.</span>
+<span class="sd">                Required keys are: [&#39;population&#39;, &#39;new_infections&#39;, &#39;total_hiv&#39;,</span>
+<span class="sd">                &#39;viral_suppression&#39;, &#39;deaths_hiv&#39;, &#39;number_of_births&#39;, &#39;natural_death_rate&#39;]</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If data is neither a string nor DataFrame, or if required columns are missing</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            This method sets several instance attributes including S0, E0, I0, R0, D0</span>
+<span class="sd">            (initial compartment values) and b, d, art (demographic parameters)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if the input data is a path or a DataFrame</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data must be a file path or pandas DataFrame&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Ensure that all required columns exist in the data</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">columnDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing columns in the dataset: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Map the column names from the dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">columnDictionary</span>
+        <span class="c1"># Extract the first row of data for initializing model compartments and parameters</span>
+        <span class="n">initial_row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Initialize population and compartment states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">=</span> <span class="n">initial_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;population&quot;</span><span class="p">]]</span>  <span class="c1"># Total US population</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">I0</span> <span class="o">=</span> <span class="n">initial_row</span><span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;new_infections&quot;</span><span class="p">]</span>
+        <span class="p">]</span>  <span class="c1"># Initial infectious population</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">S0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">I0</span>  <span class="c1"># Initial susceptible population</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">E0</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">S0</span> <span class="o">*</span> <span class="mf">0.001</span>
+        <span class="p">)</span>  <span class="c1"># Initial exposed population, exposure rate is around 0.1%</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">R0</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">initial_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;total_hiv&quot;</span><span class="p">]]</span>
+            <span class="o">*</span> <span class="n">initial_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;viral_suppression&quot;</span><span class="p">]]</span>
+        <span class="p">)</span>  <span class="c1"># Recovered population (virally suppressed)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">D0</span> <span class="o">=</span> <span class="n">initial_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;deaths_hiv&quot;</span><span class="p">]]</span>  <span class="c1"># Initial deaths from HIV</span>
+
+        <span class="c1"># Initialize demographic and ART-related parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">initial_row</span><span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;number_of_births&quot;</span><span class="p">]</span>
+        <span class="p">]</span>  <span class="c1"># Annual number of births</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">initial_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;natural_death_rate&quot;</span><span class="p">]]</span> <span class="o">/</span> <span class="mi">100000</span>
+        <span class="p">)</span>  <span class="c1"># Death rate per individual</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">art</span> <span class="o">=</span> <span class="n">initial_row</span><span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;viral_suppression&quot;</span><span class="p">]</span>
+        <span class="p">]</span>  <span class="c1"># Initial ART (viral suppression) proportion</span></div>
+
+
+<div class="viewcode-block" id="HIVOpen.simulate">
+<a class="viewcode-back" href="../../src.html#src.HIVModel.HIVOpen.simulate">[docs]</a>
+    <span class="k">def</span> <span class="nf">simulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">years</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate the SEIRS model for a specified number of years.</span>
+
+<span class="sd">        This method solves the system of differential equations that define the SEIRS</span>
+<span class="sd">        model using numerical integration. It can use either default or custom initial</span>
+<span class="sd">        conditions and parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            years (int): Number of years to simulate</span>
+<span class="sd">            initial_conditions (list, optional): List of initial values [S0, E0, I0, R0, D0].</span>
+<span class="sd">                Defaults to None, using values from loaded data.</span>
+<span class="sd">            params (list, optional): List of model parameters [beta, sigma, nu, mu, delta, gamma].</span>
+<span class="sd">                Defaults to None, using instance parameters.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame: Simulation results containing columns for Year, Exposed,</span>
+<span class="sd">                            Infectious, Recovered (ART), and Deaths (HIV)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If data hasn&#39;t been loaded before simulation</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The returned DataFrame includes yearly values for all compartments</span>
+<span class="sd">            and can be accessed via the instance&#39;s results attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Ensure that the data has been loaded before running the simulation</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data must be loaded before simulation.&quot;</span><span class="p">)</span>
+        <span class="c1"># If parameters are provided, update the model&#39;s parameters</span>
+        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">params</span>
+
+        <span class="c1"># If initial conditions are not provided, use the default values from the loaded data</span>
+        <span class="k">if</span> <span class="n">initial_conditions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initial_conditions</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">S0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">E0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">I0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">R0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D0</span><span class="p">]</span>
+
+        <span class="c1"># Define the system of differential equations for the SEIRS model</span>
+        <span class="k">def</span> <span class="nf">seirs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="n">S</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">y</span>  <span class="c1"># Unpack compartments: Susceptible, Exposed, Infectious, Recovered, Deaths</span>
+            <span class="p">)</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">S</span> <span class="o">+</span> <span class="n">E</span> <span class="o">+</span> <span class="n">I</span> <span class="o">+</span> <span class="n">R</span>  <span class="c1"># Total population (excluding deaths)</span>
+
+            <span class="c1"># Compute effective ART recovery rate based on viral suppression proportion</span>
+            <span class="n">effective_nu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">art</span>
+
+            <span class="c1"># Differential equations for the SEIRS model</span>
+            <span class="n">dS_dt</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">S</span> <span class="o">*</span> <span class="n">I</span> <span class="o">/</span> <span class="n">N</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">*</span> <span class="n">S</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">R</span>
+            <span class="p">)</span>  <span class="c1"># Susceptible</span>
+            <span class="n">dE_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">S</span> <span class="o">*</span> <span class="n">I</span> <span class="o">/</span> <span class="n">N</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">*</span> <span class="n">E</span>  <span class="c1"># Exposed</span>
+            <span class="n">dI_dt</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">effective_nu</span> <span class="o">*</span> <span class="n">I</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">*</span> <span class="n">I</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">*</span> <span class="n">I</span>
+            <span class="p">)</span>  <span class="c1"># Infectious</span>
+            <span class="n">dR_dt</span> <span class="o">=</span> <span class="n">effective_nu</span> <span class="o">*</span> <span class="n">I</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">R</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">*</span> <span class="n">R</span>  <span class="c1"># Recovered</span>
+            <span class="n">dD_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">*</span> <span class="n">I</span>  <span class="c1"># Deaths from HIV (cumulative)</span>
+
+            <span class="k">return</span> <span class="p">[</span><span class="n">dS_dt</span><span class="p">,</span> <span class="n">dE_dt</span><span class="p">,</span> <span class="n">dI_dt</span><span class="p">,</span> <span class="n">dR_dt</span><span class="p">,</span> <span class="n">dD_dt</span><span class="p">]</span>
+
+        <span class="c1"># Define the simulation time span and evaluation points</span>
+        <span class="n">t_span</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">years</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">t_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">years</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">years</span><span class="p">)</span>
+
+        <span class="c1"># Solve the system of differential equations using the RK45 method</span>
+        <span class="n">solution</span> <span class="o">=</span> <span class="n">solve_ivp</span><span class="p">(</span>
+            <span class="n">seirs</span><span class="p">,</span> <span class="n">t_span</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="p">,</span> <span class="n">t_eval</span><span class="o">=</span><span class="n">t_eval</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;RK45&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compile the simulation results into a DataFrame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;Year&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+                    <span class="nb">range</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;year&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;year&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">years</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;Exposed&quot;</span><span class="p">:</span> <span class="n">solution</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s2">&quot;Infectious&quot;</span><span class="p">:</span> <span class="n">solution</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="s2">&quot;Recovered (ART)&quot;</span><span class="p">:</span> <span class="n">solution</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                <span class="s2">&quot;Deaths (HIV)&quot;</span><span class="p">:</span> <span class="n">solution</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="HIVOpen.calibrate_parameters">
+<a class="viewcode-back" href="../../src.html#src.HIVModel.HIVOpen.calibrate_parameters">[docs]</a>
+    <span class="k">def</span> <span class="nf">calibrate_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_bootstrap</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calibrate model parameters using bootstrapped historical data.</span>
+
+<span class="sd">        This method performs parameter calibration using bootstrap resampling of the</span>
+<span class="sd">        historical data. It minimizes the mean squared error between observed and</span>
+<span class="sd">        simulated values for infections, deaths, and recovered cases.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            num_bootstrap (int, optional): Number of bootstrap samples to use.</span>
+<span class="sd">                Defaults to 100.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: Contains three elements:</span>
+<span class="sd">                - numpy.ndarray: Mean simulated values for infections</span>
+<span class="sd">                - numpy.ndarray: Mean simulated values for recovered cases</span>
+<span class="sd">                - numpy.ndarray: Mean simulated values for deaths</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            This method also creates three plots comparing observed vs simulated values</span>
+<span class="sd">            and saves them as PNG files: &#39;infections_fit3.png&#39;, &#39;deaths_fit3.png&#39;,</span>
+<span class="sd">            and &#39;recovered_fit3.png&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Store results for all bootstrap samples</span>
+        <span class="n">all_simulated_infections</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_simulated_recovered</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_simulated_deaths</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">loss_function</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="c1"># Simulate the SEIRS model for the given parameters</span>
+            <span class="n">simulated</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+
+            <span class="c1"># Extract observed values from the data</span>
+            <span class="n">observed_infections</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;new_infections&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">observed_deaths</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;deaths_hiv&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">observed_virally_suppressed</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;viral_suppression&quot;</span><span class="p">]]</span>
+                <span class="o">*</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;total_hiv&quot;</span><span class="p">]]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">values</span>
+
+            <span class="c1"># Store simulated results for analysis after bootstrapping</span>
+            <span class="n">all_simulated_infections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Infectious&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">all_simulated_recovered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Recovered (ART)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">all_simulated_deaths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Deaths (HIV)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Calculate MSE for infections, recovered, and deaths</span>
+            <span class="n">mse_infections</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">mean_squared_error</span><span class="p">(</span><span class="n">observed_infections</span><span class="p">,</span> <span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Infectious&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="o">/</span> <span class="n">observed_infections</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="n">mse_recovered</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">mean_squared_error</span><span class="p">(</span>
+                    <span class="n">observed_virally_suppressed</span><span class="p">,</span> <span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Recovered (ART)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+                <span class="p">)</span>
+                <span class="o">/</span> <span class="n">observed_virally_suppressed</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="n">mse_deaths</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">mean_squared_error</span><span class="p">(</span>
+                    <span class="n">observed_deaths</span><span class="p">,</span> <span class="n">simulated</span><span class="p">[</span><span class="s2">&quot;Deaths (HIV)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+                <span class="p">)</span>
+                <span class="o">/</span> <span class="n">observed_deaths</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Return the total loss as the sum of the MSEs</span>
+            <span class="k">return</span> <span class="n">mse_infections</span> <span class="o">+</span> <span class="n">mse_deaths</span> <span class="o">+</span> <span class="n">mse_recovered</span>
+
+        <span class="c1"># Initial guesses for parameters and their bounds for optimization</span>
+        <span class="n">initial_params</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)]</span>
+
+        <span class="c1"># Perform bootstrap calibration by sampling data and minimizing the loss function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_bootstrap</span><span class="p">):</span>
+            <span class="n">bootstrap_sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">frac</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+                <span class="n">loss_function</span><span class="p">,</span>
+                <span class="n">initial_params</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">bootstrap_sample</span><span class="p">,),</span>
+                <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s2">&quot;L-BFGS-B&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c1"># Compute the mean of the optimized parameters from all bootstrap samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Calibration completed with bootstrapping.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;Mean calibrated parameters:&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Calculate mean simulated values for infections, recovered, and deaths</span>
+        <span class="n">mean_simulated_infections</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">all_simulated_infections</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">mean_simulated_recovered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">all_simulated_recovered</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">mean_simulated_deaths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">all_simulated_deaths</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Extract observed values for comparison with simulated results</span>
+        <span class="n">observed_infections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;new_infections&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">observed_virally_suppressed</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;viral_suppression&quot;</span><span class="p">]]</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;total_hiv&quot;</span><span class="p">]]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">observed_deaths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;deaths_hiv&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="c1"># Calculate final MSE for each metric</span>
+        <span class="n">final_mse_infections</span> <span class="o">=</span> <span class="n">mean_squared_error</span><span class="p">(</span>
+            <span class="n">observed_infections</span><span class="p">,</span> <span class="n">mean_simulated_infections</span>
+        <span class="p">)</span>
+        <span class="n">final_mse_deaths</span> <span class="o">=</span> <span class="n">mean_squared_error</span><span class="p">(</span><span class="n">observed_deaths</span><span class="p">,</span> <span class="n">mean_simulated_deaths</span><span class="p">)</span>
+        <span class="n">final_mse_recovered</span> <span class="o">=</span> <span class="n">mean_squared_error</span><span class="p">(</span>
+            <span class="n">observed_virally_suppressed</span><span class="p">,</span> <span class="n">mean_simulated_recovered</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Print final MSE values for evaluation</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final MSE (Infections): </span><span class="si">{</span><span class="n">final_mse_infections</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final MSE (Death): </span><span class="si">{</span><span class="n">final_mse_deaths</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final MSE (Recovered): </span><span class="si">{</span><span class="n">final_mse_recovered</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Plot observed vs. mean simulated new infections</span>
+        <span class="n">years</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="c1"># Plot for new infections</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">years</span><span class="p">,</span>
+            <span class="n">observed_infections</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Observed New Infections&quot;</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">years</span><span class="p">,</span>
+            <span class="n">mean_simulated_infections</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean Simulated New Infections&quot;</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Year&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;New Infections (thousands)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Observed vs. Mean Simulated New Infections&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ticklabel_format</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;plain&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;infections_fit3.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="c1"># Plot for deaths</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">years</span><span class="p">,</span> <span class="n">observed_deaths</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Observed Deaths&quot;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">years</span><span class="p">,</span>
+            <span class="n">mean_simulated_deaths</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean Simulated Deaths&quot;</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Year&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;HIV-Related Deaths (thousands)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Observed vs. Mean Simulated HIV-Related Deaths&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ticklabel_format</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;plain&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;deaths_fit3.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="c1"># Plot for recovered (virally suppressed)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">years</span><span class="p">,</span>
+            <span class="n">observed_virally_suppressed</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Observed Recovered&quot;</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">years</span><span class="p">,</span>
+            <span class="n">mean_simulated_recovered</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean Simulated Recovered&quot;</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Year&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Number of Recovered (thousands)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Observed vs. Mean Simulated Recovered&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ticklabel_format</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;plain&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;recovered_fit3.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="HIVOpen.simulate_with_uncertainty">
+<a class="viewcode-back" href="../../src.html#src.HIVModel.HIVOpen.simulate_with_uncertainty">[docs]</a>
+    <span class="k">def</span> <span class="nf">simulate_with_uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">years</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate the model with uncertainty quantification.</span>
+
+<span class="sd">        This method runs multiple simulations using the calibrated parameter samples</span>
+<span class="sd">        to generate mean predictions with confidence intervals. It creates a plot</span>
+<span class="sd">        showing the mean and 95% confidence intervals for all compartments.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            years (int): Number of years to simulate forward</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If parameter samples don&#39;t exist (calibration hasn&#39;t been run)</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Creates and saves a plot as &#39;SEIRS_results3.png&#39; showing predictions</span>
+<span class="sd">            with confidence intervals for all compartments</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check if parameter samples exist; calibration must be run first</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;No parameter samples found. Run calibrate_parameters() first.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;No parameter samples found. Run calibrate_parameters() first.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Extract the last row of the data for initializing the simulation</span>
+        <span class="n">last_row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Initialize population and SEIRS compartments based on the last observed data</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">last_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;population&quot;</span><span class="p">]]</span>  <span class="c1"># Total population</span>
+        <span class="n">I0</span> <span class="o">=</span> <span class="n">last_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;new_infections&quot;</span><span class="p">]]</span>  <span class="c1"># Initial infectious individuals</span>
+        <span class="n">S0</span> <span class="o">=</span> <span class="n">N</span> <span class="o">-</span> <span class="n">I0</span>  <span class="c1"># Initial susceptible population</span>
+        <span class="n">E0</span> <span class="o">=</span> <span class="n">S0</span> <span class="o">*</span> <span class="mf">0.000667</span>  <span class="c1"># Initial exposed population</span>
+        <span class="n">R0</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">last_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;total_hiv&quot;</span><span class="p">]]</span>
+            <span class="o">*</span> <span class="n">last_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;viral_suppression&quot;</span><span class="p">]]</span>
+        <span class="p">)</span>  <span class="c1"># Recovered (virally suppressed)</span>
+        <span class="n">D0</span> <span class="o">=</span> <span class="n">last_row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="s2">&quot;deaths_hiv&quot;</span><span class="p">]]</span>  <span class="c1"># Initial cumulative deaths</span>
+
+        <span class="c1"># List to store simulation results for each parameter sample</span>
+        <span class="n">all_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Define the initial conditions for the simulation</span>
+        <span class="n">init_conds</span> <span class="o">=</span> <span class="p">[</span><span class="n">S0</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">I0</span><span class="p">,</span> <span class="n">R0</span><span class="p">,</span> <span class="n">D0</span><span class="p">]</span>
+        <span class="c1"># Run simulations for each parameter sample</span>
+        <span class="k">for</span> <span class="n">params</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_samples</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">years</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="o">=</span><span class="n">init_conds</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+            <span class="n">all_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">result</span><span class="p">[</span>
+                    <span class="p">[</span><span class="s2">&quot;Exposed&quot;</span><span class="p">,</span> <span class="s2">&quot;Infectious&quot;</span><span class="p">,</span> <span class="s2">&quot;Recovered (ART)&quot;</span><span class="p">,</span> <span class="s2">&quot;Deaths (HIV)&quot;</span><span class="p">]</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Convert all simulation results into a single numpy array</span>
+        <span class="n">all_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_results</span><span class="p">)</span>
+        <span class="c1"># Calculate mean and confidence intervals (2.5% and 97.5%) across all simulations</span>
+        <span class="n">mean_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">all_results</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">lower_ci</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">all_results</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">upper_ci</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">all_results</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">years</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;Year&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Define compartment names and corresponding colors for plotting</span>
+        <span class="n">compartments</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Exposed&quot;</span><span class="p">,</span> <span class="s2">&quot;Infectious&quot;</span><span class="p">,</span> <span class="s2">&quot;Recovered (ART)&quot;</span><span class="p">,</span> <span class="s2">&quot;Deaths (HIV)&quot;</span><span class="p">]</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="s2">&quot;purple&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Plot the mean and confidence intervals for each compartment</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">compartment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">compartments</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                <span class="n">years</span><span class="p">,</span>
+                <span class="n">mean_results</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Mean </span><span class="si">{</span><span class="n">compartment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span>
+                <span class="n">years</span><span class="p">,</span>
+                <span class="n">lower_ci</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+                <span class="n">upper_ci</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Add labels, title, and formatting to the plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Year&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Population (thousands)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;HIV SEIRS Model (95% Confidence Intervals)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ticklabel_format</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;plain&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;SEIRS_results3.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Ryan O&#39;Dea, Emily Stewart, Patrick Thornton.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

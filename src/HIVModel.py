@@ -7,17 +7,34 @@ import matplotlib.pyplot as plt
 
 
 class HIVOpen:
-    def __init__(self, beta, sigma, nu, mu, delta, gamma):
-        """
-        Initialize SEIRS parameters.
+    """A class implementing an open SEIRS (Susceptible-Exposed-Infectious-Recovered-Susceptible) model for HIV.
 
-        Parameters:
-        - beta: Infection rate
-        - sigma: Rate of progression from exposed to infectious
-        - nu: Recovery rate (Anti-retroviral Therapies)
-        - mu: Natural death rate
-        - delta: HIV-related death rate
-        - gamma: Loss of immunity rate
+    This class implements a modified SEIRS epidemiological model that accounts for
+    population dynamics, HIV transmission, and treatment effects. The model includes
+    birth rates, natural death rates, and HIV-related mortality.
+
+    Attributes:
+        beta (float): Infection rate parameter
+        sigma (float): Rate of progression from exposed to infectious state
+        nu (float): Recovery rate due to Anti-retroviral Therapies (ART)
+        mu (float): Natural death rate
+        delta (float): HIV-related death rate
+        gamma (float): Rate at which recovered individuals become susceptible again
+        results (pandas.DataFrame): Storage for simulation results
+        columns (dict): Mapping between model parameters and data column names
+        param_samples (list): Storage for parameter samples during calibration
+    """
+
+    def __init__(self, beta, sigma, nu, mu, delta, gamma):
+        """Initialize the SEIRS model with epidemiological parameters.
+
+        Args:
+            beta (float): Infection rate parameter
+            sigma (float): Rate of progression from exposed to infectious state
+            nu (float): Recovery rate due to Anti-retroviral Therapies (ART)
+            mu (float): Natural death rate
+            delta (float): HIV-related death rate
+            gamma (float): Rate at which recovered individuals become susceptible again
         """
         # Initialize model parameters
         self.beta = beta
@@ -33,12 +50,24 @@ class HIVOpen:
         self.param_samples = []
 
     def load_data(self, data, columnDictionary):
-        """
-        Load and preprocess user-provided data.
+        """Load and preprocess data for the model.
 
-        Parameters:
-        - data: Pandas dataframe or path to csv file
-        - columnDictionary: Dictionary mapping required parameters to column names.
+        This method loads either a CSV file or DataFrame and maps the columns to the
+        required model parameters. It also initializes the model's compartments and
+        demographic parameters based on the first row of data.
+
+        Args:
+            data (Union[str, pandas.DataFrame]): Either a path to a CSV file or a pandas DataFrame
+            columnDictionary (dict): Dictionary mapping model parameters to column names in the data.
+                Required keys are: ['population', 'new_infections', 'total_hiv',
+                'viral_suppression', 'deaths_hiv', 'number_of_births', 'natural_death_rate']
+
+        Raises:
+            ValueError: If data is neither a string nor DataFrame, or if required columns are missing
+
+        Note:
+            This method sets several instance attributes including S0, E0, I0, R0, D0
+            (initial compartment values) and b, d, art (demographic parameters)
         """
         # Check if the input data is a path or a DataFrame
         if isinstance(data, str):
@@ -85,16 +114,29 @@ class HIVOpen:
         ]  # Initial ART (viral suppression) proportion
 
     def simulate(self, years, initial_conditions=None, params=None):
-        """
-        Simulate the SEIRS model using the provided data and parameters.
+        """Simulate the SEIRS model for a specified number of years.
 
-        Parameters:
-        - years: Number of years to simulate.
-        - initial_conditions: Optional list of initial conditions [S, E, I, R].
-        - params: Optional list of parameters (beta, sigma, nu, mu, delta, gamma) to use for simulation.
+        This method solves the system of differential equations that define the SEIRS
+        model using numerical integration. It can use either default or custom initial
+        conditions and parameters.
+
+        Args:
+            years (int): Number of years to simulate
+            initial_conditions (list, optional): List of initial values [S0, E0, I0, R0, D0].
+                Defaults to None, using values from loaded data.
+            params (list, optional): List of model parameters [beta, sigma, nu, mu, delta, gamma].
+                Defaults to None, using instance parameters.
 
         Returns:
-        - results: Pandas DataFrame with simulation results.
+            pandas.DataFrame: Simulation results containing columns for Year, Exposed,
+                            Infectious, Recovered (ART), and Deaths (HIV)
+
+        Raises:
+            ValueError: If data hasn't been loaded before simulation
+
+        Note:
+            The returned DataFrame includes yearly values for all compartments
+            and can be accessed via the instance's results attribute
         """
         # Ensure that the data has been loaded before running the simulation
         if not hasattr(self, "data"):
@@ -158,12 +200,26 @@ class HIVOpen:
         return self.results
 
     def calibrate_parameters(self, num_bootstrap=100):
-        """
-        Calibrate model parameters using bootstrapped historical data.
+        """Calibrate model parameters using bootstrapped historical data.
+
+        This method performs parameter calibration using bootstrap resampling of the
+        historical data. It minimizes the mean squared error between observed and
+        simulated values for infections, deaths, and recovered cases.
+
+        Args:
+            num_bootstrap (int, optional): Number of bootstrap samples to use.
+                Defaults to 100.
 
         Returns:
-        - Mean simulated values for infections, recovered, and deaths for the historical years.
-        - Final MSE for infections and deaths.
+            tuple: Contains three elements:
+                - numpy.ndarray: Mean simulated values for infections
+                - numpy.ndarray: Mean simulated values for recovered cases
+                - numpy.ndarray: Mean simulated values for deaths
+
+        Note:
+            This method also creates three plots comparing observed vs simulated values
+            and saves them as PNG files: 'infections_fit3.png', 'deaths_fit3.png',
+            and 'recovered_fit3.png'
         """
         # Store results for all bootstrap samples
         all_simulated_infections = []
@@ -346,6 +402,23 @@ class HIVOpen:
         plt.show()
 
     def simulate_with_uncertainty(self, years):
+        """Simulate the model with uncertainty quantification.
+
+        This method runs multiple simulations using the calibrated parameter samples
+        to generate mean predictions with confidence intervals. It creates a plot
+        showing the mean and 95% confidence intervals for all compartments.
+
+        Args:
+            years (int): Number of years to simulate forward
+
+        Raises:
+            ValueError: If parameter samples don't exist (calibration hasn't been run)
+
+        Note:
+            Creates and saves a plot as 'SEIRS_results3.png' showing predictions
+            with confidence intervals for all compartments
+        """
+
         # Check if parameter samples exist; calibration must be run first
         if not hasattr(self.param_samples, "size"):
             raise ValueError(
