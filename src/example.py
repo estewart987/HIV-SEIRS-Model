@@ -14,7 +14,7 @@ column_dict = {
     "viral_suppression": "Viral Suppression Proportion",
     "deaths_hiv": "Deaths from HIV/AIDS",
     "number_of_deaths": "Number of Deaths",
-    "total_hiv": "People living with HIV"
+    "total_hiv": "People living with HIV",
 }
 
 # Load the historical data
@@ -25,5 +25,3 @@ model.calibrate_parameters(num_bootstrap=200)
 
 # Simulate with uncertainty for 10 years
 model.simulate_with_uncertainty(10)
-
-
