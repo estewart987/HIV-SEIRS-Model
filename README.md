@@ -51,8 +51,8 @@ To use this model:
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/estewart987/hiv-seirs-model.git
-   cd hiv-seirs-model
+   git clone https://github.com/estewart987/HIV-SEIRS-Model.git
+   cd HIV-SEIRS-Model
    ```
 
 2. **Install Dependencies:**
